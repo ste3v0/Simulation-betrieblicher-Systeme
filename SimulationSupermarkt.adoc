@@ -1,0 +1,65 @@
+:toc:
+
+:toc-title: Inhaltsverzeichnis
+
+= Simulation der Mitarbeiterauslastung im Supermarkt
+(Mir fehlt noch ein guter Titel)
+
+== Problemstellung
+Ziel der Simulation ist es die Mitarbeiterauslastung im Supermakt mit vorgegeben Parametern zubestimmen. Im Fokus liegt dabei, welche Aufgaben täglich zuerledigen sind und in wiefern diese erledigt werden, sodass am Ende eines jeden Tages Aussagen darüber getroffen werden können, wie viele Aufgaben nicht erledigt wurden bzw. wie viel Zeit für andere Aufgaben übrig war.
+
+== Entwurf
+In dieser Simulation wird der Zeitraum einer Woche betrachtet unabhängig von saisonalen oder metereologischen Einflussfaktoren. Für die eine Woche werden durchschnittswerte für jeden Tag angenommen, wie z.B. die Kundenkonjunktur über den Tag, die Einkaufszeit eines Kunden oder die gelieferte Menge an Ware. Die Simulation ist stark vereinfacht durch Durchschnittswerte und das Außerachtlassen bzw. Zusammenfassen einiger Aufgabenbereiche.
+
+=== Eingangsparameter
+==== Variabel (Simuliert durch Zufallszahlen im Wertebereich der Durchschnittswerte)
+* Kunden
+** Anzahl von Kunden über den Tag
+** durchschnittliche Einkaufszeit
+** durchschnittliche Zeit an der Kasse
+
+==== Konstant (feste Werte, die in die Simulation eingehen, können natürlich händig angepasst werden)
+* Mitarbeiterplanung (durchschnittliche oder optimale)
+** Wie lange
+** Wann
+** Pausen (Würde ich eventuell außer acht lassen, da ich das ja auch noch Programmieren muss ;)
+* Wochenplanung
+** Tagesplanung
+*** An welchen Tagen kommt wie viel Ware und wird verräumt
+*** An welchen Tagen werden Rester geräumt
+* Ware
+** durchschnittliche Menge für jeden Tag (am besten in Rollis gemessen)
+** Bearbeitungszeit für einen Rolli
+* Zeiten / andere Aufgaben
+** Vorbereitungszeit morgens
+*** Entweder geplante Zeit pro Mitarbeiter oder bestimmte Aufgaben und vorgesehene Zeit
+** Zeit für Müllrunde, Kassenputzen und Wischen
+** Zeit für Rester
+** Zeit für Pfandautomat (so in die Richtung 3 mal am Tag 10 min)
+** Zeit für einen Rolli
+** Zeit für einen Kunden an der Kasse
+
+=== Skizze
+
+:imagesdir: images
+
+image::Skizze.png[]
+
+Die räumliche Aufteilung des Marktes wird in der Simulation außer Acht gelassen.
+
+=== Ablauf
+* Jeder Tag hat seinen eigenen Ablauf zwischen 5:00 und 22:00 Uhr. Am Anfang eines jeden Tages wird geprüft ob noch Arbeit vom Vortag zuerledigen ist (gemessen in Zeit).
+* Die Aufgaben Kasse 1, 2 und 3 werden auf die anwesenden Mitarbeiter verteilt.
+* Die zu dieser Zeit zuerledigenden Aufgaben werden automatisch von den Mitarbeitern ausgeführt.
+* Kasse 1 ist immer besetzt
+* Sind zu viele Kunden an der / den Kasse/n wird eine weitere Kasse gerufen. Dann unterbricht ein Mitarbeiter seine arbeit und besetzt die Kasse.
+* Muss der Pfandautomat durch einen Mitarbeiter bedient werden, unterbricht ein Mitarbeiter seine Arbeit und kümmert sich darum.
+* Am Ende des Tages gibt es eine Auswertung über die Kundenanzahl, liegengebliebene Arbeit und Zeit für andere Arbeit.
+* Die liegengebliebene Arbeit wird in Zeiteinheiten an den nächsten Tag übergeben.
+* Für jede Woche wird dann die Auswertung zusammengefasst
+
+=== Architektur 1. Idee
+
+image::Supermarkt.png[]
+
+ 
