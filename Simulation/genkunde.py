@@ -5,15 +5,15 @@ def genKunden(env, supermarkt):
     while True:
         
         if 7 <= sekundenZuStunden(env.now) < 8:      # 7-8 Uhr
-            frequenzzeit = 1
+            frequenzzeit = random.uniform(1.9, 2.1)
         elif 8 <= sekundenZuStunden(env.now) < 10:   # 8-10 Uhr
-            frequenzzeit = 0.75
-        elif 10 <= sekundenZuStunden(env.now) < 12:  # 10-15 Uhr
-            frequenzzeit = 0.5
-        elif 12 <= sekundenZuStunden(env.now) < 18:  # 15-20 Uhr
-            frequenzzeit = 0.25
-        elif 18 <= sekundenZuStunden(env.now) < 20:  # 20-22 Uhr
-            frequenzzeit = 0.5
+            frequenzzeit = random.uniform(1.4, 1.6)
+        elif 10 <= sekundenZuStunden(env.now) < 15:  # 10-15 Uhr
+            frequenzzeit = random.uniform(0.9, 1.1)
+        elif 15 <= sekundenZuStunden(env.now) < 20:  # 15-20 Uhr
+            frequenzzeit = random.uniform(0.4, 0.6)
+        elif 20 <= sekundenZuStunden(env.now) < 22:  # 20-22 Uhr
+            frequenzzeit = random.uniform(0.9, 1.1)
         else:                                        # nach 22 Uhr 
             frequenzzeit = 1
 
