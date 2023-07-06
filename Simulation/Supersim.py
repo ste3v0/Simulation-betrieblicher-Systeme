@@ -37,6 +37,10 @@ class Supermarkt:
         rollicount = []
         global freieZeit
         freieZeit = []
+        global kassencounter2
+        kassencounter2 = []
+        global kassencounter3
+        kassencounter3 = []
 
     def setMitarbeiterzahl(self,mitarbeiterzahl):
         self.mitarbeiterzahl = mitarbeiterzahl
@@ -62,12 +66,14 @@ class Supermarkt:
                 yield kassereq
                 #print(f"{sekundenZuStunden(self.env.now)}: Kunde {kunID} wird an Kasse 2 bedient.")
                 yield self.env.timeout(40)
+                
                 #print (f"{sekundenZuStunden(self.env.now)}: Kunde {kunID} verlässt laden")
         else:
             with self.kasse3.request(priority=1,preempt= True) as kassereq:
                 yield kassereq
                 #print(f"{sekundenZuStunden(self.env.now)}: Kunde {kunID} wird an Kasse 3 bedient.")
                 yield self.env.timeout(40)
+                kassencounter3.append(1)
                 #print (f"{sekundenZuStunden(self.env.now)}: Kunde {kunID} verlässt laden")
 
     def ware(self, rolliID,processtime):
@@ -83,6 +89,7 @@ class Supermarkt:
                 except simpy.Interrupt as interrupt:
                     restzeit = self.env.now - beginn
                     print (f"{stunden_umrechnen(sekundenZuStunden(self.env.now))}: Kasse 3 wird besetzt")
+                    kassencounter3.append(1)
                     self.env.process(self.ware(rolliID,processtime-sekundenZuStunden(restzeit)))
         elif len(self.kasse2.queue) == 0:
             with self.kasse2.request(priority=3,preempt= True) as req2:
@@ -96,6 +103,7 @@ class Supermarkt:
                 except simpy.Interrupt as interrupt:
                     restzeit = self.env.now - beginn
                     print (f"{stunden_umrechnen(sekundenZuStunden(self.env.now))}: Kasse 2 wird besetzt")
+                    kassencounter2.append(1)
                     self.env.process(self.ware(rolliID,processtime-sekundenZuStunden(restzeit)))
         else:
             if self.mitarbeiterzahl > 3:
@@ -107,7 +115,7 @@ class Supermarkt:
                     rollicount.append(rolliID)
 
     def nixzutun(self):
-        if len(self.kasse3.queue) == 0:
+        if len(self.kasse3.queue)==0:
             with self.kasse3.request(priority=5,preempt=False) as freereq:
                 yield freereq                
                 beginn = self.env.now
@@ -116,28 +124,37 @@ class Supermarkt:
                     freieZeit.append(self.env.now - beginn)
                 except simpy.Interrupt as interrupt:
                     freieZeit.append(self.env.now - beginn)
+                    yield self.env.timeout(0)
                     self.env.process(self.nixzutun())
+                    
 
-        elif len(self.kasse2.queue) == 0:
-            with self.kasse2.request(priority=5,preempt= False) as req2:
-                yield req2                
+
+        if len(self.kasse2.queue):
+            with self.kasse2.request(priority=5,preempt= True) as freereq2:
+                yield freereq2                
                 beginn = self.env.now
                 try:
                     yield self.env.timeout(stundenZuSekunden(17))
                     freieZeit.append(self.env.now - beginn)
                 except simpy.Interrupt as interrupt:
                     freieZeit.append(self.env.now - beginn)
+                    self.env.process(self.nixzutun())
+                   
+                   
 
-        else:
-            if self.mitarbeiterzahl > 3:
-                with self.anderemitarbeiter.request(priority=5,preempt=False) as req3:
-                    yield req3
+
+        if self.mitarbeiterzahl > 3:
+                with self.anderemitarbeiter.request(priority=5,preempt=False) as freereq3:
+                    yield freereq3
                     beginn = self.env.now
                     try:
                         yield self.env.timeout(stundenZuSekunden(17))
                         freieZeit.append(self.env.now - beginn)
                     except simpy.Interrupt as interrupt:
                         freieZeit.append(self.env.now - beginn)
+                        self.env.process(self.nixzutun())
+                        
+                        
                         
 
 
@@ -149,46 +166,55 @@ class Supermarkt:
             
 
 
-def genKunden(env, supermarkt):
+def genKunden(env, supermarkt, a, b, c, d ,e,f):
     yield env.timeout(stundenZuSekunden(2))
     global kunID
+    hebel = 0.5
     kunID = 0
     while True:
         
         if 7 <= sekundenZuStunden(env.now) < 8:      # 7-8 Uhr
-            frequenzzeit = random.uniform(1.9, 2.1)
+            frequenzzeit = random.uniform(a - hebel, a + hebel)
         elif 8 <= sekundenZuStunden(env.now) < 10:   # 8-10 Uhr
-            frequenzzeit = random.uniform(1.4, 1.6)
+            frequenzzeit = random.uniform(b - hebel, b + hebel)
         elif 10 <= sekundenZuStunden(env.now) < 15:  # 10-15 Uhr
-            frequenzzeit = random.uniform(0.9, 1.1)
+            frequenzzeit = random.uniform(c - hebel, c + hebel)
         elif 15 <= sekundenZuStunden(env.now) < 20:  # 15-20 Uhr
-            frequenzzeit = random.uniform(0.4, 0.6)
+            frequenzzeit = random.uniform(d - hebel, d + hebel)
         elif 20 <= sekundenZuStunden(env.now) < 22:  # 20-22 Uhr
-            frequenzzeit = random.uniform(0.9, 1.1)
+            frequenzzeit = random.uniform(e - hebel, e + hebel)
         else:                                        # nach 22 Uhr 
             frequenzzeit = 1
 
         kunID+=1
         
-        env.process(supermarkt.einkauf(kunID,minutenZuSekunden(random.uniform(13, 17))))
-        yield env.timeout(minutenZuSekunden(frequenzzeit))
+        env.process(supermarkt.einkauf(kunID,minutenZuSekunden(random.uniform(1, 29))))
+        yield env.timeout(minutenZuSekunden(frequenzzeit/f))
 
 
 
-def genWareKommt(env, supermarkt):
+def genWareKommt(env, supermarkt,a,b,c,d):
     global rolliID
     rolliID = 1
-    while rolliID <= 4:
+    #Rollis vom Vortag
+    while rolliID <=a:
+        env.process(supermarkt.ware(rolliID,0.75))
+        rolliID +=1
+        yield env.timeout(0)
+    #Rollis Morgen
+    while rolliID <= a+b:
         env.process(supermarkt.ware(rolliID,0.75))
         rolliID +=1
         yield env.timeout(0)
     yield env.timeout(stundenZuSekunden(5))
-    while rolliID <= 16:
+    #Rollis wenn Ware kommt/Resterrollis die geräumt werden müssen
+    while rolliID <= a+b+c:
         env.process(supermarkt.ware(rolliID,0.75))
         rolliID +=1
         yield env.timeout(0)
+    #Rollis abends
     yield env.timeout(stundenZuSekunden(9))
-    while rolliID <= 19:
+    while rolliID <= a+b+c+d:
         env.process(supermarkt.ware(rolliID,0.75))
         rolliID +=1
         yield env.timeout(0)
@@ -213,7 +239,7 @@ def genWareKommtNicht(env, supermarkt):
     
 
 def genNixzutun(env,supermarkt):
-    
+ 
         env.process(supermarkt.nixzutun())
         yield env.timeout(0)
 
@@ -224,9 +250,9 @@ def genNixzutun(env,supermarkt):
 
 
 
-def tagWoWareKommt(env, supermarkt):
-    env.process(genKunden(env,supermarkt))
-    env.process(genWareKommt(env,supermarkt))
+def tagWoWareKommt(env, supermarkt,rollisvortag):
+    env.process(genKunden(env,supermarkt,1.3,1.1,0.7,0.6,0.8,random.uniform(0.95,1.15)))
+    env.process(genWareKommt(env,supermarkt,rollisvortag,random.uniform(3,4),random.uniform(10,20),random.uniform(2,4)))
     env.process(genNixzutun(env,supermarkt))
     if sekundenZuStunden(env.now)>(7):
         supermarkt.setMitarbeiterzahl(7)
@@ -237,9 +263,9 @@ def tagWoWareKommt(env, supermarkt):
     yield env.timeout(0)
 
 
-def tagWoWareNichtKommt(env, supermarkt):
-    env.process(genKunden(env,supermarkt))
-    env.process(genWareKommtNicht(env,supermarkt))
+def tagWoWareNichtKommt(env, supermarkt,rollisvortag):
+    env.process(genKunden(env,supermarkt,1.3,1.1,0.7,0.6,0.8,random.uniform(0.95,1.15)))
+    env.process(genWareKommt(env,supermarkt,rollisvortag,random.uniform(3,4),random.uniform(6,10),random.uniform(2,4)))
     env.process(genNixzutun(env,supermarkt))
     if sekundenZuStunden(env.now)>(7):
         supermarkt.setMitarbeiterzahl(4)
@@ -262,106 +288,129 @@ listfreieZeit = ["Zeit für andere Aufgaben"]
 #Woche
 #Montag
 print ("===================Montag===================")    
-env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.0001, strict = False)   
+env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.00001, strict = False)   
 supermarkt = Supermarkt(env,4) #Es sind nur drei Mitarbeiter da, da Kasse 1 aber eine Resource ist die nur für die Kasse zuständig ist, wird ein Mitarbeiter mehr simuliert, da vor 7:00 Uhr keiner an der Kasse steht
-env.process(tagWoWareNichtKommt(env,supermarkt))
+env.process(tagWoWareNichtKommt(env,supermarkt,0))
 env.run(until=stundenZuSekunden(22))
 print ("===================Tag vorbei===================")
 print(f"Anzahl Kunden: {kunID}")
 print(f"Anzahl zuverräumende Rollis: {rolliID-1}")
 print(f"Anzahl verräumte Rollis: {len(rollicount)}")
 print(f"Freie Zeit von Mitarbeitern: {sekundenZuStunden(sum(freieZeit))}")
+print(f"Kasse 2 musste {sum(kassencounter2)} mal bestzt werden.")
+print(f"Kasse 3 musste {sum(kassencounter3)} mal bestzt werden.")
 listKundenzahl.append(kunID)
 listrollizahl.append(rolliID-1)
 listgeschaffterollis.append(len(rollicount))
 listfreieZeit.append(sekundenZuStunden(sum(freieZeit)))
+rollisnaechstertag = rolliID-1-len(rollicount)
 
 
 #Dienstag
 print ("===================Dienstag===================")    
-env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.0001, strict = False)   
+env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.00001, strict = False)   
 supermarkt = Supermarkt(env,4)
-env.process(tagWoWareKommt(env,supermarkt))
+env.process(tagWoWareKommt(env,supermarkt,rollisnaechstertag))
 env.run(until=stundenZuSekunden(22))
 print ("===================Tag vorbei===================")
 print(f"Anzahl Kunden: {kunID}")
 print(f"Anzahl zuverräumende Rollis: {rolliID-1}")
 print(f"Anzahl verräumte Rollis: {len(rollicount)}")
 print(f"Freie Zeit von Mitarbeitern: {sekundenZuStunden(sum(freieZeit))}")
+print(f"Kasse 2 musste {sum(kassencounter2)} mal bestzt werden.")
+print(f"Kasse 3 musste {sum(kassencounter3)} mal bestzt werden.")
 listKundenzahl.append(kunID)
 listrollizahl.append(rolliID-1)
 listgeschaffterollis.append(len(rollicount))
 listfreieZeit.append(sekundenZuStunden(sum(freieZeit)))
+rollisnaechstertag = rolliID-1-len(rollicount)
 
 
 #Mittwoch
 print ("===================Mittwoch===================")    
-env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.0001, strict = False)   
+env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.00001, strict = False)   
 supermarkt = Supermarkt(env,4)
-env.process(tagWoWareNichtKommt(env,supermarkt))
+env.process(tagWoWareNichtKommt(env,supermarkt,rollisnaechstertag))
 env.run(until=stundenZuSekunden(22))
 print ("===================Tag vorbei===================")
 print(f"Anzahl Kunden: {kunID}")
 print(f"Anzahl zuverräumende Rollis: {rolliID-1}")
 print(f"Anzahl verräumte Rollis: {len(rollicount)}")
 print(f"Freie Zeit von Mitarbeitern: {sekundenZuStunden(sum(freieZeit))}")
+print(f"Kasse 2 musste {sum(kassencounter2)} mal bestzt werden.")
+print(f"Kasse 3 musste {sum(kassencounter3)} mal bestzt werden.")
 listKundenzahl.append(kunID)
 listrollizahl.append(rolliID-1)
 listgeschaffterollis.append(len(rollicount))
 listfreieZeit.append(sekundenZuStunden(sum(freieZeit)))
+rollisnaechstertag = rolliID-1-len(rollicount)
 
 #Donnerstag
 print ("===================Donnerstag===================")    
-env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.0001, strict = False)   
+env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.00001, strict = False)   
 supermarkt = Supermarkt(env,4)
-env.process(tagWoWareKommt(env,supermarkt))
+env.process(tagWoWareKommt(env,supermarkt,rollisnaechstertag))
 env.run(until=stundenZuSekunden(22))
 print ("===================Tag vorbei===================")
 print(f"Anzahl Kunden: {kunID}")
 print(f"Anzahl zuverräumende Rollis: {rolliID-1}")
 print(f"Anzahl verräumte Rollis: {len(rollicount)}")
 print(f"Freie Zeit von Mitarbeitern: {sekundenZuStunden(sum(freieZeit))}")
+print(f"Kasse 2 musste {sum(kassencounter2)} mal bestzt werden.")
+print(f"Kasse 3 musste {sum(kassencounter3)} mal bestzt werden.")
 listKundenzahl.append(kunID)
 listrollizahl.append(rolliID-1)
 listgeschaffterollis.append(len(rollicount))
 listfreieZeit.append(sekundenZuStunden(sum(freieZeit)))
+rollisnaechstertag = rolliID-1-len(rollicount)
 
 #Freitag
 print ("===================Freitag===================")    
-env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.0001, strict = False)   
+env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.00001, strict = False)   
 supermarkt = Supermarkt(env,4)
-env.process(tagWoWareNichtKommt(env,supermarkt))
+env.process(tagWoWareNichtKommt(env,supermarkt,rollisnaechstertag))
 env.run(until=stundenZuSekunden(22))
 print ("===================Tag vorbei===================")
 print(f"Anzahl Kunden: {kunID}")
 print(f"Anzahl zuverräumende Rollis: {rolliID-1}")
 print(f"Anzahl verräumte Rollis: {len(rollicount)}")
 print(f"Freie Zeit von Mitarbeitern: {sekundenZuStunden(sum(freieZeit))}")
+print(f"Kasse 2 musste {sum(kassencounter2)} mal bestzt werden.")
+print(f"Kasse 3 musste {sum(kassencounter3)} mal bestzt werden.")
 listKundenzahl.append(kunID)
 listrollizahl.append(rolliID-1)
 listgeschaffterollis.append(len(rollicount))
 listfreieZeit.append(sekundenZuStunden(sum(freieZeit)))
+rollisnaechstertag = rolliID-1-len(rollicount)
 
 #Samstag
 print ("===================Samstag===================")    
-env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.0001, strict = False)   
+env = simpy.rt.RealtimeEnvironment(initial_time = stundenZuSekunden(5),factor = 0.00001, strict = False)   
 supermarkt = Supermarkt(env,4)
-env.process(tagWoWareNichtKommt(env,supermarkt))
+env.process(tagWoWareNichtKommt(env,supermarkt,rollisnaechstertag))
 env.run(until=stundenZuSekunden(22))
 print ("===================Tag vorbei===================")
 print(f"Anzahl Kunden: {kunID}")
 print(f"Anzahl zuverräumende Rollis: {rolliID-1}")
 print(f"Anzahl verräumte Rollis: {len(rollicount)}")
 print(f"Freie Zeit von Mitarbeitern: {sekundenZuStunden(sum(freieZeit))}")
+print(f"Kasse 2 musste {sum(kassencounter2)} mal bestzt werden.")
+print(f"Kasse 3 musste {sum(kassencounter3)} mal bestzt werden.")
 listKundenzahl.append(kunID)
 listrollizahl.append(rolliID-1)
 listgeschaffterollis.append(len(rollicount))
 listfreieZeit.append(sekundenZuStunden(sum(freieZeit)))
+rollisnaechstertag = rolliID-1-len(rollicount)
 
 spalten = ["","Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
 daten = [listKundenzahl,listrollizahl, listgeschaffterollis,listfreieZeit]
 df = pd.DataFrame(daten,columns=spalten)
 df.to_csv('Analyse.csv', index=False)
+
+
+print (f"")
+listKundenzahl.pop(0)
+print(f"Kunden in dieser Woche: {sum(listKundenzahl)}")
 
 
 
