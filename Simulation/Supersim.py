@@ -252,7 +252,7 @@ def genNixzutun(env,supermarkt):
 
 def tagWoWareKommt(env, supermarkt,rollisvortag):
     env.process(genKunden(env,supermarkt,1.3,1.1,0.7,0.6,0.8,random.uniform(0.95,1.15)))
-    env.process(genWareKommt(env,supermarkt,rollisvortag,random.uniform(3,4),random.uniform(10,20),random.uniform(2,4)))
+    env.process(genWareKommt(env,supermarkt,rollisvortag,random.uniform(3,4),random.uniform(10,16),random.uniform(2,4)))
     env.process(genNixzutun(env,supermarkt))
     if sekundenZuStunden(env.now)>(7):
         supermarkt.setMitarbeiterzahl(7)
